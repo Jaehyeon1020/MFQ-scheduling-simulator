@@ -28,11 +28,10 @@ class Process:
         self.waiting_time = 0
         self.starting_time = 0  # cpu 처음 할당 받을 때 시간
         self.completion_time = 0  # 모든 cpu burst 마친 뒤 시간 (completion_time - arrival time = Turnarround Time)
-        self.cpu_burst = True  # cpu burst 시간 내에 있으면 True, IO burst 시간 내에 있으면 False
-        self.in_cpu = False
         self.remaining_cpu_burst = 0
         self.remaining_io_burst = 0
         self.timeslice = 0
+        self.process_status = 0  # process 생성 안됐으면 0, ready queue에 있으면 1, cpu-burst중이면 2, io-burst 중이면 3
 
     @property
     def pid(self):
@@ -84,6 +83,16 @@ class Process:
         print(self.sequence)
         print("")
 
+    def preemption(self):
+        self.process_status = 1
+        if self.current_queue < 2:
+            self.current_queue += 1
+
+    def wakeup(self):
+        self.process_status = 1
+        if self.current_queue > 0:
+            self.current_queue -= 1
+
 
 def split_process_info(process_info_line):
     process_info_line = process_info_line.split(maxsplit=4)
@@ -98,33 +107,64 @@ def mfq(process_list):
     :param process_list: input.txt로부터 추출한 전체 Process 인스턴스 리스트
     :return: None
     """
-    q0 = deque([])  # ready queue 0
-    q1 = deque([])  # ready queue 1
-    q2 = deque([])  # ready queue 2
-
-    # process의 init_queue값에 맞게 ready queue에 삽입
-    def insert_rq(process):
-        if process.init_queue == 0:
-            process.timeslice = 2
-            q0.appendleft(process)
-        elif process.init_queue == 1:
-            process.timeslice = 4
-            q1.appendleft(process)
-        else:
-            q2.appendleft(process)
-
+    ready_queue_0 = deque([])  # ready queue 0
+    ready_queue_1 = deque([])  # ready queue 1
+    ready_queue_2 = deque([])  # ready queue 2
 
     time = 0  # 반복문 돌며 1씩 증가: cpu 시간을 표현
     current_process = None  # 현재 cpu를 할당받고 있는 Process
     current_queue = 0  # 현재 몇번째 ready queue에서 Process를 실행하는지
 
+    # process의 init_queue값에 맞게 ready queue에 삽입
+    def first_insert_rq(process):
+        if process.init_queue == 0:
+            process.timeslice = 2
+            ready_queue_0.appendleft(process)
+        elif process.init_queue == 1:
+            process.timeslice = 4
+            ready_queue_1.appendleft(process)
+        else:
+            ready_queue_2.appendleft(process)
+
+    def insert_rq(process):
+        if process.current_queue == 0:
+            process.timeslice = 2
+            ready_queue_0.appendleft(process)
+        elif process.current_queue == 1:
+            process.timeslice = 4
+            ready_queue_1.appendleft(process)
+        else:
+            ready_queue_2.appendleft(process)
+
+    def shortest_remainig(rq_2):
+        shortest = rq_2[0]
+        for i in range(1, len(rq_2)):
+            if rq_2[i].remaining_cpu_burst < shortest:
+                shortest = rq_2[i]
+        return shortest
+
+    def fetch():
+        if len(ready_queue_0) > 0:
+            currentqueue = 0
+            return ready_queue_0.pop(), currentqueue
+        elif len(ready_queue_1) > 0:
+            currentqueue = 1
+            return ready_queue_1.pop(), currentqueue
+        else:
+            currentqueue = 2
+            shortest = shortest_remainig(ready_queue_2)
+            ready_queue_2.remove(shortest)
+            return shortest, currentqueue
+
+    # while loop 한번 실행 == time 1
     while True:
-        for process in process_list:  # ready queue에 대한 처리 : queue 최초 진입, preemption, wakeup
+        for process in process_list:
             if process.arrival_time == time:  # 최초 ready queue 진입 Process
+                first_insert_rq(process)
+            if current_process.timeslice == 0:  # preemption 당해야 하는 상태이면 다시 ready queue로 보내고 새로 fetch
+                process.preemption()
                 insert_rq(process)
-            if current_process.timeslice = 0: # 이 이후 preemption 구현
-
-
+                current_process, current_queue = fetch()
 
 
 try:
