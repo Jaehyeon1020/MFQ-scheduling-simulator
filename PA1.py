@@ -183,6 +183,7 @@ def mfq(process_list):
     def fetch():
         # process fetch, in-cpu status로 전환
         # print("called fetch")  # test
+        # 주석 지우기
 
         nonlocal current_queue
         nonlocal current_process
@@ -195,7 +196,7 @@ def mfq(process_list):
             current_queue = 0  # 현재 큐를 q0로
             current_process = ready_queue_0.pop()  # q0의 프로세스를 cpu에 올림
             current_process.process_status = 2  # 올려진 프로세스의 status : in-cpu
-            scheduling_result.append(current_process)
+            scheduling_result.append(current_process)  # fetch되면 scheduling result에 기록
 
             if current_process.is_been_cpu is False:  # cpu에 한번도 올라간 적이 없으면
                 current_process.starting_time = time  # starting time 기록
@@ -363,48 +364,48 @@ def mfq(process_list):
                     current_process.timeslice -= 1  # 남았으면 -1
 
         # 모든 프로세스에 대해 각 time마다 확인
-        for process in process_list:
+        for pc in process_list:
             # print("for process in process_list 진입")  # test
             # 현재 IO burst 중인 프로세스의 IO burst time --(0보다 클 때)
-            if process.process_status == 3 and process.remaining_io_burst > 0:
+            if pc.process_status == 3 and pc.remaining_io_burst > 0:
                 # print("io burst --")  # test
-                process.remaining_io_burst -= 1
+                pc.remaining_io_burst -= 1
             # 현재 cpu burst 중인 프로세스의 cpu burst time --(0보다 클 때)
-            if process.process_status == 2 and process.remaining_cpu_burst > 0:
+            if pc.process_status == 2 and pc.remaining_cpu_burst > 0:
                 # print("cpu burst --")  # test
-                process.remaining_cpu_burst -= 1
+                pc.remaining_cpu_burst -= 1
 
             # arrival time 된 프로세스 rq 진입
-            if process.arrival_time == time and time > 0:
-                first_insert_rq(process)
+            if pc.arrival_time == time and time > 0:
+                first_insert_rq(pc)
             # IO burst 끝난 프로세스 rq 진입
-            if process.process_status == 3 and process.remaining_io_burst == 0:
-                wakeup(process)
+            if pc.process_status == 3 and pc.remaining_io_burst == 0:
+                wakeup(pc)
             # 이 프로세스가 현재 cpu 점유중이라면
-            if process is current_process:
+            if pc is current_process:
                 # print("this process is current_process")  # test
-                if process.remaining_cpu_burst == 0:  # cpu burst time = 0이면
+                if pc.remaining_cpu_burst == 0:  # cpu burst time = 0이면
                     # print("and remaining cpu burst == 0")  # test
-                    if process.current_cycle == process.cycles:  # 현재 마지막 cycle이었다면 종료상태로 전환
+                    if pc.current_cycle == pc.cycles:  # 현재 마지막 cycle이었다면 종료상태로 전환
                         # print("and at last cycle")  # test
                         # print("Process completed")  # test
-                        process.process_status = -1
-                        process.completion_time = time  # 종료상태 전환 후 completion time 기록
+                        pc.process_status = -1
+                        pc.completion_time = time  # 종료상태 전환 후 completion time 기록
                         current_process = None  # 현재 프로세스 지우기
                         # print("current process setted None")  # test
                     else:  # 마지막 cycle 아니었다면 IO burst 상태로 전환
                         # print("and not at last cycle")  # test
                         # print("converted to IO burst status")  # test
-                        process.process_status = 3
+                        pc.process_status = 3
                         current_process = None  # 현재 프로세스 지우기
                         # print("current process setted None")  # test
                 else:  # cpu burst time 0 아니면
                     # print("and remaining cpu burst != 0")  # test
-                    if process.current_queue == 0 or process.current_queue == 1:  # 이 process가 q0 또는 q1에서 왔는지 확인
+                    if pc.current_queue == 0 or pc.current_queue == 1:  # 이 process가 q0 또는 q1에서 왔는지 확인
                         # print("and this process is from q0 or q1")  # test
-                        if process.timeslice == 0:  # q0/q1에서 왔으면 timeslice가 0이 됐는지 확인
+                        if pc.timeslice == 0:  # q0/q1에서 왔으면 timeslice가 0이 됐는지 확인
                             # print("and remaining timeslice 0")  # test
-                            preemption(process)  # timeslice 0이라면 preemption
+                            preemption(pc)  # timeslice 0이라면 preemption
                             current_process = None  # 현재 프로세스 지우기
                             # print("current process setted None")  # test
             # print("for process in process_list 끝")  # test
