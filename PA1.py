@@ -107,6 +107,7 @@ def mfq(process_list):
     time: int = 0  # 반복문 돌며 1씩 증가: cpu 시간을 표현
     current_process: Process = None  # 현재 cpu를 할당받고 있는 Process
     current_queue: int = 0  # 현재 몇번째 ready queue에서 Process를 실행하는지, fetch 하며 업데이트
+    preempted_process: Process = None  # 방금 cpu에서 preemption 된 프로세스 저장
 
     def first_insert_rq(process: Process):
         # process의 init_queue값에 맞게 ready queue에 삽입, in-queue status로 전환
@@ -187,6 +188,7 @@ def mfq(process_list):
 
         nonlocal current_queue
         nonlocal current_process
+        nonlocal preempted_process
 
         if len(ready_queue_0) > 0:
             # print("fetch() : if len(ready_queue_0) > 0")  # test
@@ -195,6 +197,8 @@ def mfq(process_list):
 
             current_queue = 0  # 현재 큐를 q0로
             current_process = ready_queue_0.pop()  # q0의 프로세스를 cpu에 올림
+            if current_process is preempted_process:
+                return
             current_process.process_status = 2  # 올려진 프로세스의 status : in-cpu
             scheduling_result.append(current_process)  # fetch되면 scheduling result에 기록
 
@@ -209,6 +213,8 @@ def mfq(process_list):
 
             current_queue = 1
             current_process = ready_queue_1.pop()
+            if current_process is preempted_process:
+                return
             current_process.process_status = 2
             scheduling_result.append(current_process)
 
@@ -223,6 +229,8 @@ def mfq(process_list):
 
             if current_process is None:  # 이미 current process = None이 된 경우(이미 preemption or sleep된 경우)
                 current_process = shortest
+                if current_process is preempted_process:
+                    return
                 current_process.process_status = 2
                 scheduling_result.append(current_process)
                 ready_queue_2.remove(shortest)
@@ -235,6 +243,8 @@ def mfq(process_list):
                 # 현재 cpu에 올라가있는 프로세스가 더 cpu 시간 많이남았으면 교체(SRTN)
                 preemption(current_process)
                 current_process = shortest
+                if current_process is preempted_process:
+                    return
                 current_process.process_status = 2
                 scheduling_result.append(current_process)
                 ready_queue_2.remove(shortest)
@@ -265,6 +275,9 @@ def mfq(process_list):
         # print("preempted :", end='')  # test
         # print(pc)  # test
 
+        nonlocal preempted_process
+
+        preempted_process = pc
         pc.process_status = 1
         if pc.current_queue != 2:
             pc.current_queue += 1
