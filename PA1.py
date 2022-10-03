@@ -105,7 +105,7 @@ def mfq(process_list):
 
     time: int = 0  # 반복문 돌며 1씩 증가: cpu 시간을 표현
     current_process: Process = None  # 현재 cpu를 할당받고 있는 Process
-    current_queue: int = 0  # 현재 몇번째 ready queue에서 Process를 실행하는지, fetch 하며 업데이트
+    current_queue: int = 0  # 현재 몇번째 ready queue에서 Process를 실행하는지, dispatch 하며 업데이트
 
     def first_insert_rq(process: Process):
         # process의 init_queue값에 맞게 ready queue에 삽입, in-queue status로 전환
@@ -172,8 +172,8 @@ def mfq(process_list):
                 shortest = ready_queue_2[i]
         return shortest
 
-    def fetch():
-        # process fetch, in-cpu status로 전환
+    def dispatch():
+        # process dispatch, in-cpu status로 전환
 
         nonlocal current_queue
         nonlocal current_process
@@ -320,14 +320,14 @@ def mfq(process_list):
             - 현재 cpu에 올려져있는 process가 q0/q1에서 왔다면 timeslice -- (0보다 클 때)
             - 현재 queue 내부에 존재하는 process들의 wating time ++
               ** ready queue 들어올때 sequence에서 cpu, io burst time 세팅 하고 들어올 것
-            <preemption & fetch>
+            <preemption & dispatch>
             - arrival time 된 process의 rq 진입, IO burst time 0 된 process의 rq 진입(wakeup)
             - 현재 cpu 점유중인 process가 나와야 하는지 확인
               -- cpu burst time 확인해서 0이면 -> 현재 cycle이 마지막 cycle이면 끝, 마지막 아니면 IO burst 상태로 전환
               -- q0,q1에서 스케줄링 중이면 -> time slice == 0인지 확인
                 --- 0이면 preemption
-              -- q2에서 스케줄링 중이면 -> srtn 적용(fetch 함수에서 접근)
-            - 위의 결과로 cpu가 비었다면 새로 fetch
+              -- q2에서 스케줄링 중이면 -> srtn 적용(dispatch 함수에서 접근)
+            - 위의 결과로 cpu가 비었다면 새로 dispatch
             - time ++
         """
 
@@ -373,7 +373,7 @@ def mfq(process_list):
         if (current_process is None) or (current_process.current_queue == 2):
             # 위 for 문의 결과로 cpu에서 preemption 또는 sleep으로 전환되어 cpu가 비었을 때 또는 q2에서 온 프로세스가 돌고있을 때
             # print("if current process is None or current process.current queue == 2")  # test
-            fetch()  # 새로운 프로세스 cpu에 올림(q2의 경우 상위 큐에 프로세스가 들어왔거나 같은 큐에 더 시간 짧은 프로세스가 있을 때 바뀜)
+            dispatch()  # 새로운 프로세스 cpu에 올림(q2의 경우 상위 큐에 프로세스가 들어왔거나 같은 큐에 더 시간 짧은 프로세스가 있을 때 바뀜)
 
         # 현재 ready queue 내에 존재하는 프로세스의 wating time ++
         for in_rq_process in ready_queue_0:
